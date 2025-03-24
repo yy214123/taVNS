@@ -59,7 +59,7 @@ function dynamicDAQControlECG()
     ylim(ax, [-params.initialAmplitude*2, params.initialAmplitude*2]); % 上下留空
 
     % Time axis buffer
-    displayDuration = 5; % 5秒視窗
+    displayDuration = 5;
     bufferSize = s.Rate * displayDuration;
     timeBuffer = linspace(-displayDuration, 0, bufferSize);
     dataBuffer = zeros(1, bufferSize);
@@ -69,7 +69,8 @@ function dynamicDAQControlECG()
     title(ax, 'Real-time Biphasic Square Wave');
 
     % Timer settings
-    updateInterval = 0.1; % 每0.1秒更新
+    minDuration = 2 / params.stimFrequency;
+    updateInterval = max(0.1, minDuration);
     t = timer('ExecutionMode', 'fixedRate', ...
               'Period', updateInterval, ...
               'TimerFcn', @updatePlot);

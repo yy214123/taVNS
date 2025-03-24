@@ -17,7 +17,7 @@ function params = daqParameters(condition)
     params.samplingRate = 10000;  % in Hz
 
     % Common setting
-    params.totalTime = 1;               % Duration of stimulation in seconds
+    params.test_mode_times = 5;               % Duration of stimulation in seconds
     params.initialAmplitude = 0.1;        % Initial output voltage (0.1V = 0.1 mA = 100 µA)
 
     % Condition-specific stimulation parameters
