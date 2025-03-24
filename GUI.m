@@ -1,5 +1,8 @@
 function dynamicDAQControlECG()
+    
 
+    stimStartTime = tic;
+    stimActive = false;
     %% Load parameter settings
     params = daqParameters();
     subjectName = '';
@@ -85,6 +88,12 @@ function dynamicDAQControlECG()
             otherwise
                 return;
         end
+        
+        % 更新刺激計時
+        stimStartTime = tic;
+        stimActive = true;
+    
+        % 更新GUI文字顯示
         hText.String = ['Amplitude: ' num2str(amplitude*1000) ' µA'];
         disp(['Updated amplitude: ' num2str(amplitude*1000) ' µA']);
     end
@@ -111,7 +120,9 @@ function dynamicDAQControlECG()
             start(t);
             hStartBtn.Enable = 'off';
             hStopBtn.Enable = 'on';
-    
+            % 開始刺激時重新計時
+            stimStartTime = tic;
+            stimActive = true;
             disp(['DAQ output started for subject: ' subjectName]);
         end
     end
@@ -146,27 +157,39 @@ function dynamicDAQControlECG()
     function updatePlot(~,~)
         segmentLength = round(s.Rate * updateInterval);
         dt = 1/s.Rate;
-        
+    
         stimSignal = zeros(1, segmentLength);
+    
+        % 檢查是否處於刺激有效時間內
+        elapsedTime = toc(stimStartTime);
+    
+        % 若超過刺激時間，則停止刺激 (amplitude = 0)
+        if elapsedTime > params.test_mode_times
+            stimActive = false;
+        end
+    
+        currentAmplitude = amplitude * stimActive; % 依據刺激狀態決定振幅（true = 1，false = 0）
+    
         samplesPerCycle = floor(s.Rate / params.stimFrequency);
         pulseWidthSamples = floor(params.pulseWidthSec * s.Rate);
         halfCycle = floor(samplesPerCycle / 2);
-
+    
         for cycleStart = 1:samplesPerCycle:segmentLength
             posEnd = cycleStart + pulseWidthSamples - 1;
             negStart = cycleStart + halfCycle;
             negEnd = negStart + pulseWidthSamples - 1;
-
+    
             if posEnd <= segmentLength && negEnd <= segmentLength
-                stimSignal(cycleStart:posEnd) = amplitude;     % Positive phase
-                stimSignal(negStart:negEnd) = -amplitude;      % Negative phase
+                stimSignal(cycleStart:posEnd) = currentAmplitude;     % 正向波形
+                stimSignal(negStart:negEnd) = -currentAmplitude;      % 負向波形
             end
         end
-
-        % DAQ output
+    
+        % 輸出DAQ資料
         queueOutputData(s, stimSignal');
         startForeground(s);
-
+    
+        % 更新顯示緩衝區
         dataBuffer = [dataBuffer(segmentLength+1:end), stimSignal];
         set(hLine, 'YData', dataBuffer);
         drawnow limitrate;
